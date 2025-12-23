@@ -189,3 +189,123 @@ def setup_ml_logger(experiment_name, log_level=logging.INFO):
     logger.info(f"Log file created: {log_filename}")
 
     return logger
+
+
+# Part 2: Monitoring in AI/ML Workflows
+
+"""
+What is monitoring?
+
+Monitoring is the continious observation and measurement of system behavior,
+performance, and resource utilization during ML workflows. While logging
+RECORDS events, monitoring MEASURES and TRACKS metrics over time.'
+
+In ML/AI, monitoring is essential for:
+
+1. Performance tracking - How fast is training? Are GPUs being utilized?
+2. Resource Management - Is the system runing out of memory? CPU bottlenecks?
+3. Mode Quality - Are metrics improving? Is the model converging?
+4. Cost Optimization - How long does training take? Cloud comput costs?
+5. Anomaly Detection - Are there unexpected spikes or degradation?
+
+
+Monitoring vs Logging:
+
+Logging: What happened? (events, errors, state changes)
+         Example: "Model checkpoint saved at epocj 10"
+
+Monitoring: How is it performing? (metrics, trends, resources)
+        Example: "Epoch 10: 45s duration, 89% GPU util, 12GB RAM"
+
+
+"""
+
+
+def get_system_metrics():
+    """
+    Captures current system resource utilization (CPU, memory, GPU if availble).
+
+    This function demonstrates real-world monitoring of computational resources
+    during ML training - critical for oprimizing infrastructure costs and
+    identifying bottlenecks.
+
+    Returns:
+    --------------------------------
+    dict: Dictionary containing system metrics
+
+    Why this matters:
+    --------------------------------
+    - CPU usage: Identifies if data preprocessing is bottlenecked
+    - Memory usage: Prevents out-of-memory crashes during taining
+    - GPU usage: Ensures expensive GPU resources are fully utilized
+
+    """
+
+    metrics = {}    # Dictionary to store all metrics (key-value pairs)
+
+    if PUSTIL_AVAILABLE:
+        # psutil.cpu_percent() returns CPU usage as a percentage
+        # interval=0.1 means measure over 0.1 seconds for accuracy
+        metrics['cpu_percent'] = psutil.cpu_percent(interval=0.1)
+
+        # psutil.virtual_memory() returns memory statistics
+        # .percent gives percentage of total RAM in use
+        memory = psutil.virtual_memory()
+        metrics['memory_percent'] = memory.percent
+        metrics['memory_used_gb'] = memory.used / (1024**3) # Convert bytes to GB
+        metrics['memory_available_gb'] = memory.available / (1024**3)
+
+        # Note: GPU monitoring requires specialized libraries (nvidia-smi, pynvml)
+        # For production ML, integrate libraries like pynvml or gpustat
+        metrics['gpu_available'] = False    # Placeholder for GPU monitoring
+
+    else:
+        # Fallback when psutil is not available
+        metrics['cpu_percent'] = 'N/A'
+        metrics['memory_percent'] = 'N/A'
+        metrics['note'] = 'Install psutil for system monitoring'
+
+    return metrics
+
+
+def monitor_execution_time(logger):
+    """
+    A DECORATOR that measures and logs execution time of any function.
+
+    WHAT IS A DECORATOR?
+    -------------------
+    A decorator is a function that modifies the behavior of another function.
+    Syntax: @decorator_name above a function definition
+
+    Example:
+    @monitor_execution_time(logger)
+    def train_model():
+        # training code
+        pass
+        
+    The decorator "wraps" train_model() to add timing functionality WITHOUT
+    modifying the original function code. This is powerful for adding
+    monitoring to existing functions cleanly.
+
+    Parameters:
+    -----------
+    logger: logging.Logger
+        Logger instance to record timing information
+
+    Returns:
+    -----------
+    decorator: function
+        The actual decorator function that will wrap target functions
+
+
+    How it works:
+    -----------
+    1. @monitor_execution_time(logger) is called first, returns 'decorator'
+    2. 'decorator' wraps the target function
+    3. 'wrapper' replaces the target function and adds timing logic
+    4. Original function is called inside wrapper
+    5. Time measurement and logging happen automatically
+
+
+
+    """
