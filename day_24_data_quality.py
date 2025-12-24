@@ -659,3 +659,224 @@ COMMON SOLUTIONS FOR CONSTANT/EMPTY COLUMNS:
 
 # Part 8: Outliers
 
+"""
+What are Outliers?
+----------------------
+Values that are extremely different from most other values in the same column.
+Not necessarily wrong, but unusual enough to investigate.
+
+
+Why do they happen?
+-------------------------
+- Legitimate extreme cases (billionaire in income dataset)
+- Data entry errors (extra zero: 1,000 - > 10,000)
+- Measurement errors (sensor malfunction)
+- Different populations mixed together
+- Special/test records in production data
+
+
+Why do they matter?
+---------------------
+- skew statistical measure (mean, standard deviation)
+- affect machine learning model training
+- might indicate data quality problems
+- might indicate fraud or unusual events (important to catch!)
+- can make visualizations hard to read
+
+How to detect:
+---------------
+Use statistical methods to find values far from the 'normal' range
+
+"""
+
+print("-" * 80)
+print("Detecting outliers")
+print('-' * 80)
+
+# Focus on purchase_amount column
+# First, remove missing value for calculation
+purchase_amounts = df['purchase_amount'].dropna()
+
+# Calculate basic statistics
+mean_amount = purchase_amounts.mean()
+median_amount = purchase_amounts.median()
+std_amount = purchase_amounts.std()     # standard deviation
+
+
+
+print(f"\nPurchase Amount Statistics")
+print(f"Mean (average): {mean_amount}")
+print(f"Median (middle value) {median_amount}")
+print(f"Standard Deviation: {std_amount}")
+
+
+
+# Method 1: Z-Score Method
+# Z score measures how many standard deviations away from mean
+# Generally, /Z-Score/ > 3 is considered an outlier
+print("\nZ-Score Method (|z| > 3 indicates outlier):")
+for idx, amount in df['purchase_amount'].items():
+    if pd.notna(amount):  # Skip NaN values
+        z_score = (amount - mean_amount) / std_amount
+        is_outlier = abs(z_score) > 3
+        print(f"Row {idx}: ${amount:.2f}, z-score={z_score:.2f}, outlier={is_outlier}")
+
+
+
+
+
+
+# Part 9: Suspicious or impossible values
+
+"""
+What are suspicious/impossible values?
+---------------------------------------
+values that violate business rules, physical reality, or logical constraints:
+- Negative age
+- Age > 150 years
+- Future birth dates
+- Negative prices (unless refund)
+- Email without @ symbol
+
+
+
+Why do they matter?
+--------------------
+- indicate serious data quality problems
+- make analysis meaningless
+- break business logic and applications
+- suggest inadequate data validation
+- undermine trust in entire dataset
+
+How to detect:
+--------------------
+Apply domain knowledge and business rules to validate each field
+
+"""
+
+
+print("=" * 80)
+print("Detecting suspicious or impossible values")
+print("=" * 80)
+
+# Check age column for impossible values
+print("\nValidating 'age' column:")
+print("Checking for negative ages...")
+for idx, age in df['age'].items():
+    if pd.notna(age) and age != '30':  # Skip NaN and string '30'
+        if age < 0:
+            print(f"  Row {idx}: age={age} is NEGATIVE (impossible!)")
+        elif age > 120:  # Very old but theoretically possible
+            print(f"  Row {idx}: age={age} is EXTREMELY HIGH (suspicious!)")
+        elif age > 150:
+            print(f"  Row {idx}: age={age} is IMPOSSIBLE (no human this old)")
+
+
+
+# Part 10: Structural Issues
+
+"""
+What are structural issues?
+-----------------------------
+Problems with the overall shape, organization, or schema of the data:
+- unexpected number of columns
+- wrong column names
+- columns in wrong order
+- mixed data in single column
+- headers missing or in wrong row
+
+Why do they happen?
+---------------------
+- File format changes over time
+- Different systems export different formats
+- Manual Excel manipulation before export
+- Concatenating files with different schemas
+- Missing or extra columns in source
+
+Why do they matter?
+-----------------------
+- Code expects specific columns, breaks if missing
+- Automated pipelines fail
+- can't join/merge with other datasets
+- Column mapping becomes ambiguous
+- hard to maintain code with changing structures
+
+
+How to detect:
+------------------
+Compare actual structure against expected schema
+
+"""
+
+
+print("=" * 80)
+print("Detecting structural issues")
+print("=" * 80)
+
+
+
+# Define what we EXPECT the data structure to look like
+expected_columns = ['customer_id', 'customer_name', 'age', 'email',
+                    'purchase_amoutn', 'country', 'signup_date']
+
+# Notice: We expect 'country' and 'signup_date' but they are not in our data
+# And we have 'region' and 'status' which aren't expected
+
+
+actual_columns = df.columns.tolist()
+
+
+print(f"\nExpected columns: {expected_columns}")
+print(f"Actual columns {actual_columns}")
+
+
+# Find missing columns (expected but not present)
+missing_columns = set(expected_columns) - set(actual_columns)
+print(f"\nMissing columns (expected but not found): {missing_columns}")
+
+# Find unexpected columns (present but not expected)
+unexpected_columns = set(actual_columns) - set(expected_columns)
+print(f"\nUnexpected columns (found but not expected): {unexpected_columns}")
+
+# Check column order
+if expected_columns[:len(actual_columns)] != actual_columns:
+    print("\nWARNING: Column order differs from expected!")
+    print("This might cause issues if code relies on column positions.")
+
+
+
+# Check total number of columns
+print(f"\nExpected {len(expected_columns)} columns, found {len(actual_columns)} columns")
+
+# Show the shape of the data (rows x columns)
+print(f"\nDataFrame shape: {df.shape[0]} rows x {df.shape[1]} columns")
+
+
+
+"""
+COMMON SOLUTIONS FOR STRUCTURAL ISSUES:
+----------------------------------------
+
+
+1. Schema validation (Enforce structure)
+    - define schema explicitly (column names, types, order)
+    - validate before processing
+    - fail fast if structure is wrong
+    - when to use: production pipelines, automated processes
+    - when not to use: exploratory analysis, adapting to changes
+
+
+2. Flexible parsing (adapt to structure)
+    - check what columns exist, adjust code accordingly
+    - use column presence checks: if 'country' in df.columns
+    - when to use: handling multiple data sources, versions
+    - when not to use: need strict consistenct
+
+3. Column mapping (rename/reorder)
+    - df.rename(columns={'old_name': 'new_name'})
+    - reorder columns to match expected order
+    
+
+
+
+"""
